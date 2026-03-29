@@ -1,0 +1,23 @@
+name = "cfw-bun-hono"
+compatibility_date = "2024-04-13"
+
+# [vars]
+# MY_VAR = "my-variable"
+
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "my-bucket"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "media"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cfw-bun-hono-drizzle-d1"
+database_id = "0851d157-8136-418c-98e9-4f025439ecfa"
+migrations_dir = "drizzle/migrations"

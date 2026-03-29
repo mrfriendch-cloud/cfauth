@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Wrangler local state
+.wrangler/
+
+# Environment variables
+.dev.vars
+.env
+.env.local
+.env.*.local
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+.kiro/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Drizzle migrations meta (generated)
+drizzle/migrations/meta/
+
+# Temp / refactored drafts
+src/pages/*.refactored.tsx
