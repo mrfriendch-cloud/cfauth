@@ -1,29 +1,45 @@
 import { sql } from "drizzle-orm";
 import { generateId } from "lucia";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
-export const posts = sqliteTable("posts", {
-  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-  authorId: text("author_id")
-    .notNull()
-    .references(() => users.id),
-  title: text("title", { length: 256 }).notNull(),
-  description: text("description", { length: 512 }).notNull().default(""),
-  tags: text("tags").notNull().default(""),
-  content: text("content").notNull(),
-  contentType: text("content_type").notNull().default("markdown"),
-  status: text("status", { enum: ["draft", "published"] })
-    .notNull()
-    .default("draft"),
-  coverImage: text("cover_image").notNull().default(""),
-  category: text("category", { enum: ["Products", "Services", "News"] })
-    .notNull()
-    .default("Products"),
-  pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
-  createdAt: text("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id),
+    title: text("title", { length: 256 }).notNull(),
+    description: text("description", { length: 512 }).notNull().default(""),
+    tags: text("tags").notNull().default(""),
+    content: text("content").notNull(),
+    contentType: text("content_type").notNull().default("markdown"),
+    status: text("status", { enum: ["draft", "published"] })
+      .notNull()
+      .default("draft"),
+    coverImage: text("cover_image").notNull().default(""),
+    category: text("category", { enum: ["Products", "Services", "News"] })
+      .notNull()
+      .default("Products"),
+    pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => ({
+    // Speeds up all public listing queries (most common pattern)
+    statusCategoryIdx: index("posts_status_category_idx").on(
+      table.status,
+      table.category,
+    ),
+    // Speeds up user-specific post lookups (/posts page, getUserPosts)
+    authorIdx: index("posts_author_idx").on(table.authorId),
+    // Speeds up pinned post query on homepage
+    pinnedIdx: index("posts_pinned_idx").on(table.pinned),
+    // Speeds up date-ordered listing queries
+    createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
+  }),
+);
 
 export type InsertPost = typeof posts.$inferInsert;
 export type SelectPost = typeof posts.$inferSelect;
@@ -44,13 +60,20 @@ export const users = sqliteTable("users", {
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
 
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey().notNull(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  expiresAt: integer("expires_at").notNull(),
-});
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => ({
+    // Speeds up session validation on every authenticated request
+    userIdIdx: index("sessions_user_id_idx").on(table.userId),
+  }),
+);
 
 export const inquiries = sqliteTable("inquiries", {
   id: text("id")

@@ -1,6 +1,6 @@
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { InsertPost, SelectPost, posts } from "../db/schema";
-import { eq, and, like, or, desc } from "drizzle-orm";
+import { eq, and, like, or, desc, asc, sql, count } from "drizzle-orm";
 
 /**
  * Extract image URLs from markdown content and cover image
@@ -87,33 +87,42 @@ export async function getUserPosts(
   const pageSize = 6;
   const offset = (page - 1) * pageSize;
 
-  // Get all user's posts
-  const results = await db
+  // Build conditions pushed to DB
+  const conditions: ReturnType<typeof eq>[] = [eq(posts.authorId, userId)];
+
+  if (category) {
+    conditions.push(
+      eq(posts.category, category as "Products" | "Services" | "News"),
+    );
+  }
+
+  // Tag filtering: stored as comma-separated, use LIKE on DB side
+  if (tag) {
+    conditions.push(
+      or(
+        like(posts.tags, `%${tag}%`),
+      ) as ReturnType<typeof eq>,
+    );
+  }
+
+  // Search: push LIKE conditions to DB for title, description, and tags
+  if (search) {
+    conditions.push(
+      or(
+        like(posts.title, `%${search}%`),
+        like(posts.description, `%${search}%`),
+        like(posts.tags, `%${search}%`),
+      ) as ReturnType<typeof eq>,
+    );
+  }
+
+  return await db
     .select()
     .from(posts)
-    .where(eq(posts.authorId, userId))
-    .orderBy(desc(posts.createdAt));
-
-  // Apply filters in memory
-  const filtered = results.filter((p) => {
-    if (category && p.category !== category) return false;
-    if (tag) {
-      const postTags =
-        p.tags?.split(",").map((t) => t.trim().toLowerCase()) ?? [];
-      if (!postTags.includes(tag.toLowerCase())) return false;
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        (p.description ?? "").toLowerCase().includes(q) ||
-        (p.tags ?? "").toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  return filtered.slice(offset, offset + pageSize);
+    .where(and(...conditions))
+    .orderBy(desc(posts.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 }
 
 export async function getUserPostsCount(
@@ -123,31 +132,36 @@ export async function getUserPostsCount(
 ): Promise<number> {
   const { search, category, tag } = opts;
 
-  const results = await db
-    .select()
+  const conditions: ReturnType<typeof eq>[] = [eq(posts.authorId, userId)];
+
+  if (category) {
+    conditions.push(
+      eq(posts.category, category as "Products" | "Services" | "News"),
+    );
+  }
+
+  if (tag) {
+    conditions.push(
+      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
+    );
+  }
+
+  if (search) {
+    conditions.push(
+      or(
+        like(posts.title, `%${search}%`),
+        like(posts.description, `%${search}%`),
+        like(posts.tags, `%${search}%`),
+      ) as ReturnType<typeof eq>,
+    );
+  }
+
+  const [result] = await db
+    .select({ total: count() })
     .from(posts)
-    .where(eq(posts.authorId, userId))
-    .orderBy(desc(posts.createdAt));
+    .where(and(...conditions));
 
-  const filtered = results.filter((p) => {
-    if (category && p.category !== category) return false;
-    if (tag) {
-      const postTags =
-        p.tags?.split(",").map((t) => t.trim().toLowerCase()) ?? [];
-      if (!postTags.includes(tag.toLowerCase())) return false;
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        (p.description ?? "").toLowerCase().includes(q) ||
-        (p.tags ?? "").toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  return filtered.length;
+  return result?.total ?? 0;
 }
 
 export async function getPinnedPost(
@@ -165,7 +179,7 @@ export async function getPost(
   db: DrizzleD1Database,
   id: number,
 ): Promise<SelectPost | null> {
-  const result = await db.select().from(posts).where(eq(posts.id, id));
+  const result = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   return result[0] ?? null;
 }
 
@@ -287,8 +301,8 @@ export async function getPublishedPosts(
   const pageSize = 6;
   const offset = (page - 1) * pageSize;
 
-  // Build conditions array
-  const conditions = [eq(posts.status, "published")];
+  // Build all conditions pushed to the DB
+  const conditions: ReturnType<typeof eq>[] = [eq(posts.status, "published")];
 
   if (category && category !== "All") {
     conditions.push(
@@ -300,35 +314,31 @@ export async function getPublishedPosts(
     conditions.push(eq(posts.authorId, author));
   }
 
-  // Execute query with all conditions
-  const results = await db
+  // Tag: stored as comma-separated string — use LIKE on DB side
+  if (tag) {
+    conditions.push(
+      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
+    );
+  }
+
+  // Full-text search via SQL LIKE pushed to D1
+  if (search) {
+    conditions.push(
+      or(
+        like(posts.title, `%${search}%`),
+        like(posts.description, `%${search}%`),
+        like(posts.tags, `%${search}%`),
+      ) as ReturnType<typeof eq>,
+    );
+  }
+
+  return await db
     .select()
     .from(posts)
     .where(and(...conditions))
-    .orderBy(posts.createdAt);
-
-  // Apply tag and search filters in memory
-  const filtered = results.filter((p) => {
-    if (tag) {
-      const postTags =
-        p.tags?.split(",").map((t) => t.trim().toLowerCase()) ?? [];
-      if (!postTags.includes(tag.toLowerCase())) {
-        return false;
-      }
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        (p.description ?? "").toLowerCase().includes(q) ||
-        (p.tags ?? "").toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  // Apply pagination
-  return filtered.slice(offset, offset + pageSize);
+    .orderBy(asc(posts.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 }
 
 export async function getPublishedPostsCount(
@@ -342,8 +352,7 @@ export async function getPublishedPostsCount(
 ): Promise<number> {
   const { search, category, tag, author } = opts;
 
-  // Build conditions array
-  const conditions = [eq(posts.status, "published")];
+  const conditions: ReturnType<typeof eq>[] = [eq(posts.status, "published")];
 
   if (category && category !== "All") {
     conditions.push(
@@ -355,37 +364,36 @@ export async function getPublishedPostsCount(
     conditions.push(eq(posts.authorId, author));
   }
 
-  // Execute query with all conditions
-  const results = await db
-    .select()
+  if (tag) {
+    conditions.push(
+      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
+    );
+  }
+
+  if (search) {
+    conditions.push(
+      or(
+        like(posts.title, `%${search}%`),
+        like(posts.description, `%${search}%`),
+        like(posts.tags, `%${search}%`),
+      ) as ReturnType<typeof eq>,
+    );
+  }
+
+  // Use aggregate COUNT(*) — single lightweight query instead of full row fetch
+  const [result] = await db
+    .select({ total: count() })
     .from(posts)
-    .where(and(...conditions))
-    .orderBy(posts.createdAt);
+    .where(and(...conditions));
 
-  // Apply tag and search filters in memory
-  const filtered = results.filter((p) => {
-    if (tag) {
-      const postTags =
-        p.tags?.split(",").map((t) => t.trim().toLowerCase()) ?? [];
-      if (!postTags.includes(tag.toLowerCase())) {
-        return false;
-      }
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        (p.description ?? "").toLowerCase().includes(q) ||
-        (p.tags ?? "").toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  return filtered.length;
+  return result?.total ?? 0;
 }
 
+/**
+ * Fetch all unique tags. Projects only the tags column to minimize data transfer.
+ */
 export async function getAllTags(db: DrizzleD1Database): Promise<string[]> {
+  // Only select the tags column — avoids pulling full post rows across the wire
   const rows = await db.select({ tags: posts.tags }).from(posts);
   const tagSet = new Set<string>();
   for (const row of rows) {
@@ -400,6 +408,9 @@ export async function getAllTags(db: DrizzleD1Database): Promise<string[]> {
   return Array.from(tagSet).sort();
 }
 
+/**
+ * Fetch unique tags for a given category. Projects only the tags column.
+ */
 export async function getTagsByCategory(
   db: DrizzleD1Database,
   category: "Products" | "Services" | "News",

@@ -41,7 +41,7 @@ export default function Contact({
               </div>
             ) : (
               <form
-                method="POST"
+                method="post"
                 action="/api/inquiries"
                 class="space-y-6 bg-white"
               >

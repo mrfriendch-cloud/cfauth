@@ -17,7 +17,7 @@ export function AuthForm({
   const targetUrl = `/api/auth/${action === "Log in" ? "login" : "signup"}`;
 
   return (
-    <form class="w-full max-w-sm pt-8" method="POST" action={targetUrl}>
+    <form class="w-full max-w-sm pt-8" method="post" action={targetUrl}>
       {redirect && <input type="hidden" name="redirect" value={redirect} />}
       <div class="mb-8">
         <h1 className="text-2xl">{action}</h1>

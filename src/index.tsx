@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
+import { cache } from "hono/cache";
 import { drizzle } from "drizzle-orm/d1";
 
 import api from "./api";
@@ -91,22 +92,30 @@ app.get("/", async (c) => {
 });
 
 // HTMX endpoint — search/filter posts for homepage
-app.get("/api/home/posts", async (c) => {
-  const search = c.req.query("search") ?? "";
-  const category = c.req.query("category") ?? "All";
-  const tag = c.req.query("tag") ?? "";
-  const author = c.req.query("author") ?? "";
-  const page = Number(c.req.query("page") ?? "1");
-  const db = drizzle(c.env.DB);
-  const results = await getPublishedPosts(db, {
-    search,
-    category,
-    tag,
-    author,
-    page,
-  });
-  return c.html(<HomePostCards posts={results} />);
-});
+// Cached at the edge for 60s — public, non-sensitive content
+app.get(
+  "/api/home/posts",
+  cache({
+    cacheName: "home-posts",
+    cacheControl: "public, max-age=60, s-maxage=60",
+  }),
+  async (c) => {
+    const search = c.req.query("search") ?? "";
+    const category = c.req.query("category") ?? "All";
+    const tag = c.req.query("tag") ?? "";
+    const author = c.req.query("author") ?? "";
+    const page = Number(c.req.query("page") ?? "1");
+    const db = drizzle(c.env.DB);
+    const results = await getPublishedPosts(db, {
+      search,
+      category,
+      tag,
+      author,
+      page,
+    });
+    return c.html(<HomePostCards posts={results} />);
+  },
+);
 
 app.get("/services", async (c) => {
   const user = c.get("user");
@@ -134,21 +143,28 @@ app.get("/services", async (c) => {
   );
 });
 
-app.get("/api/services/posts", async (c) => {
-  const search = c.req.query("search") ?? "";
-  const tag = c.req.query("tag") ?? "";
-  const author = c.req.query("author") ?? "";
-  const page = Number(c.req.query("page") ?? "1");
-  const db = drizzle(c.env.DB);
-  const results = await getPublishedPosts(db, {
-    search,
-    category: "Services",
-    tag,
-    author,
-    page,
-  });
-  return c.html(<ServicePostCards posts={results} />);
-});
+app.get(
+  "/api/services/posts",
+  cache({
+    cacheName: "services-posts",
+    cacheControl: "public, max-age=60, s-maxage=60",
+  }),
+  async (c) => {
+    const search = c.req.query("search") ?? "";
+    const tag = c.req.query("tag") ?? "";
+    const author = c.req.query("author") ?? "";
+    const page = Number(c.req.query("page") ?? "1");
+    const db = drizzle(c.env.DB);
+    const results = await getPublishedPosts(db, {
+      search,
+      category: "Services",
+      tag,
+      author,
+      page,
+    });
+    return c.html(<ServicePostCards posts={results} />);
+  },
+);
 
 app.get("/news", async (c) => {
   const user = c.get("user");
@@ -176,21 +192,28 @@ app.get("/news", async (c) => {
   );
 });
 
-app.get("/api/news/posts", async (c) => {
-  const search = c.req.query("search") ?? "";
-  const tag = c.req.query("tag") ?? "";
-  const author = c.req.query("author") ?? "";
-  const page = Number(c.req.query("page") ?? "1");
-  const db = drizzle(c.env.DB);
-  const results = await getPublishedPosts(db, {
-    search,
-    category: "News",
-    tag,
-    author,
-    page,
-  });
-  return c.html(<NewsPostCards posts={results} />);
-});
+app.get(
+  "/api/news/posts",
+  cache({
+    cacheName: "news-posts",
+    cacheControl: "public, max-age=60, s-maxage=60",
+  }),
+  async (c) => {
+    const search = c.req.query("search") ?? "";
+    const tag = c.req.query("tag") ?? "";
+    const author = c.req.query("author") ?? "";
+    const page = Number(c.req.query("page") ?? "1");
+    const db = drizzle(c.env.DB);
+    const results = await getPublishedPosts(db, {
+      search,
+      category: "News",
+      tag,
+      author,
+      page,
+    });
+    return c.html(<NewsPostCards posts={results} />);
+  },
+);
 
 app.get("/posts", async (c) => {
   const user = c.get("user");
@@ -223,12 +246,14 @@ app.get("/posts", async (c) => {
   );
 });
 
-// HTMX endpoint for posts list filtering
+// HTMX endpoint for posts list filtering — authenticated, never cached
 app.get("/api/posts/list", async (c) => {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
   }
+
+  c.header("Cache-Control", "no-store, private");
 
   const search = c.req.query("search") ?? "";
   const category = c.req.query("category") ?? "";
