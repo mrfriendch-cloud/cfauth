@@ -22,6 +22,7 @@ export const posts = sqliteTable(
       .notNull()
       .default("Products"),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+    featured: integer("featured", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

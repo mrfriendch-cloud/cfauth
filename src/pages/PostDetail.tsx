@@ -745,6 +745,30 @@ export default function PostDetail({
                   </button>
                 )}
 
+                {/* Feature — admin, published, not featured */}
+                {isAdmin && post.status === "published" && !post.featured && (
+                  <button
+                    type="button"
+                    class="w-full text-left text-sm text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 px-3 py-2 rounded-lg font-medium transition-all duration-300 post-action-btn"
+                    data-action="feature"
+                    data-post-id={post.id}
+                  >
+                    ★ Feature post
+                  </button>
+                )}
+
+                {/* Unfeature — admin, featured */}
+                {isAdmin && post.featured && (
+                  <button
+                    type="button"
+                    class="w-full text-left text-sm text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 px-3 py-2 rounded-lg font-medium transition-all duration-300 post-action-btn"
+                    data-action="unfeature"
+                    data-post-id={post.id}
+                  >
+                    ☆ Unfeature
+                  </button>
+                )}
+
                 {/* Delete */}
                 {isAdmin ? (
                   <button

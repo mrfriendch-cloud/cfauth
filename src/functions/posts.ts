@@ -98,11 +98,7 @@ export async function getUserPosts(
 
   // Tag filtering: stored as comma-separated, use LIKE on DB side
   if (tag) {
-    conditions.push(
-      or(
-        like(posts.tags, `%${tag}%`),
-      ) as ReturnType<typeof eq>,
-    );
+    conditions.push(or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>);
   }
 
   // Search: push LIKE conditions to DB for title, description, and tags
@@ -141,9 +137,7 @@ export async function getUserPostsCount(
   }
 
   if (tag) {
-    conditions.push(
-      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
-    );
+    conditions.push(or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>);
   }
 
   if (search) {
@@ -202,6 +196,19 @@ export async function updatePostPinned(
   const result = await db
     .update(posts)
     .set({ pinned })
+    .where(eq(posts.id, id))
+    .returning();
+  return result[0] ?? null;
+}
+
+export async function updatePostFeatured(
+  db: DrizzleD1Database,
+  id: number,
+  featured: boolean,
+): Promise<SelectPost | null> {
+  const result = await db
+    .update(posts)
+    .set({ featured })
     .where(eq(posts.id, id))
     .returning();
   return result[0] ?? null;
@@ -316,9 +323,7 @@ export async function getPublishedPosts(
 
   // Tag: stored as comma-separated string — use LIKE on DB side
   if (tag) {
-    conditions.push(
-      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
-    );
+    conditions.push(or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>);
   }
 
   // Full-text search via SQL LIKE pushed to D1
@@ -336,7 +341,7 @@ export async function getPublishedPosts(
     .select()
     .from(posts)
     .where(and(...conditions))
-    .orderBy(asc(posts.createdAt))
+    .orderBy(desc(posts.featured), asc(posts.createdAt))
     .limit(pageSize)
     .offset(offset);
 }
@@ -365,9 +370,7 @@ export async function getPublishedPostsCount(
   }
 
   if (tag) {
-    conditions.push(
-      or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>,
-    );
+    conditions.push(or(like(posts.tags, `%${tag}%`)) as ReturnType<typeof eq>);
   }
 
   if (search) {

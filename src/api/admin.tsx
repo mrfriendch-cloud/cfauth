@@ -11,6 +11,7 @@ import {
   updatePostStatus,
   deletePost,
   updatePostPinned,
+  updatePostFeatured,
 } from "../functions/posts";
 
 const adminRouter = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -108,6 +109,23 @@ adminRouter.post("/posts/:id/unpin", async (c) => {
   const updated = await updatePostPinned(db, id, false);
   if (!updated) return c.json({ error: "Post not found" }, 404);
   return c.json({ success: true, message: "Post unpinned" });
+});
+
+// Feature/unfeature a post (appears first in post listings)
+adminRouter.post("/posts/:id/feature", async (c) => {
+  const db = drizzle(c.env.DB);
+  const id = Number(c.req.param("id"));
+  const updated = await updatePostFeatured(db, id, true);
+  if (!updated) return c.json({ error: "Post not found" }, 404);
+  return c.json({ success: true, message: "Post featured" });
+});
+
+adminRouter.post("/posts/:id/unfeature", async (c) => {
+  const db = drizzle(c.env.DB);
+  const id = Number(c.req.param("id"));
+  const updated = await updatePostFeatured(db, id, false);
+  if (!updated) return c.json({ error: "Post not found" }, 404);
+  return c.json({ success: true, message: "Post unfeatured" });
 });
 
 // Publish a post

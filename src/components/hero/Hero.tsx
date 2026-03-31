@@ -39,13 +39,16 @@ export default function Hero({ pinnedPost, isLoggedIn = false }: HeroProps) {
     <section class="py-12 md:py-16">
       {/* Mobile Cover Image */}
       {coverImage && (
-        <div class="block md:hidden mb-8 w-full rounded-2xl overflow-hidden shadow-lg shadow-cyan-500/20 aspect-[16/9]">
+        <a
+          href={ctaHref}
+          class="block md:hidden mb-8 w-full rounded-2xl overflow-hidden shadow-lg shadow-cyan-500/20 aspect-[16/9] group"
+        >
           <img
             src={coverImage}
             alt={title}
-            class="w-full h-full object-cover"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
-        </div>
+        </a>
       )}
 
       {/* Hero Content */}
@@ -59,10 +62,18 @@ export default function Hero({ pinnedPost, isLoggedIn = false }: HeroProps) {
             </Badge>
           </div>
 
-          {/* Title with Gradient */}
-          <h1 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent leading-tight mb-6">
-            {title}
-          </h1>
+          {/* Title - clickable when pinned post exists */}
+          {pinnedPost ? (
+            <a href={ctaHref} class="group mb-6">
+              <h1 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent leading-tight group-hover:from-cyan-500 group-hover:to-blue-500 transition-all duration-300">
+                {title}
+              </h1>
+            </a>
+          ) : (
+            <h1 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent leading-tight mb-6">
+              {title}
+            </h1>
+          )}
 
           {/* Description */}
           <p class="text-slate-600 text-base md:text-lg leading-relaxed mb-10">
@@ -92,9 +103,16 @@ export default function Hero({ pinnedPost, isLoggedIn = false }: HeroProps) {
         {/* Right Column: Desktop Cover Image */}
         <div class="hidden md:block shrink-0 w-1/3 pt-[4.5rem]">
           {coverImage ? (
-            <div class="rounded-2xl overflow-hidden shadow-xl shadow-cyan-500/20">
-              <img src={coverImage} alt={title} class="w-full h-auto block" />
-            </div>
+            <a
+              href={ctaHref}
+              class="group block rounded-2xl overflow-hidden shadow-xl shadow-cyan-500/20 hover:shadow-2xl hover:shadow-cyan-500/30 transition-all duration-500"
+            >
+              <img
+                src={coverImage}
+                alt={title}
+                class="w-full h-auto block group-hover:scale-105 transition-transform duration-500"
+              />
+            </a>
           ) : (
             <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 aspect-[4/3] flex items-center justify-center">
               <svg
